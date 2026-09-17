@@ -12,7 +12,7 @@
 - Python 3.11 及以上；
 - 推荐使用 `uv`；
 - BitBrowser 本地 API 已开启；
-- Donut 主窗口保持打开，以供 Windows UIA 操作。
+- Donut 管理器进程保持运行；脚本可恢复最小化或隐藏到托盘的主窗口，以供 Windows UIA 操作。
 - Donut 中文和英文界面均支持，自动发现时需停留在配置文件列表页面。
 
 ## 安装

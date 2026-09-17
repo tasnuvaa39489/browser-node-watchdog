@@ -25,7 +25,8 @@ class FakeDesktopInstance:
         self.backend = backend
         self.wrapper = wrapper
 
-    def windows(self):
+    def windows(self, **kwargs):
+        self.wrapper.window_query = kwargs
         return [
             FakeWindow("Administrator cmd - Donut test", 1),
             FakeWindow("Donut Browser", 2),
@@ -73,6 +74,7 @@ def test_get_window_uses_exact_win32_handle_before_uia():
 
     assert adapter._get_window() is wrapper
     assert desktop.backends == ["win32", "uia"]
+    assert wrapper.window_query == {"visible_only": False}
 
 
 def test_parse_current_donut_table_rows():

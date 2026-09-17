@@ -58,7 +58,10 @@ class DonutUiaAdapter:
 
     def _get_window(self):
         Desktop, _ = self._desktop_and_uia()
-        windows = Desktop(backend="win32").windows()
+        # Donut commonly keeps running while hiding its main window in the
+        # notification area. Include hidden top-level windows so the watchdog
+        # can restore the manager before reading or operating its profile list.
+        windows = Desktop(backend="win32").windows(visible_only=False)
         exact = [window for window in windows if window.window_text() == self.window_title]
         if len(exact) != 1:
             matches = [window.window_text() for window in windows if "Donut" in window.window_text()]
@@ -144,6 +147,7 @@ class DonutUiaAdapter:
         raise AdapterError(f"Donut profile {profile_name!r} did not reach running={expected}")
 
     def restart(self, instance: InstanceConfig, stop_delay_seconds: int) -> None:
+        self._activate_window()
         name = instance.profile_name.strip()
         if not name:
             raise AdapterError(f"{instance.browser_name}: Donut UIA mode requires profile_name")
@@ -163,6 +167,7 @@ class DonutUiaAdapter:
         self._wait_running(name, True)
 
     def discover_profiles(self) -> list[DiscoveredProfile]:
+        self._activate_window()
         return [
             DiscoveredProfile(
                 browser_type="donut",
