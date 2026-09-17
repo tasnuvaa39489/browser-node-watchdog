@@ -112,10 +112,20 @@ class DonutUiaAdapter:
             profiles.append(current)
         return profiles
 
+    def _load_profiles(self, attempts: int = 10) -> list[dict[str, Any]]:
+        for attempt in range(attempts):
+            profiles = self._parse_profiles()
+            if profiles:
+                return profiles
+            if attempt < attempts - 1:
+                self.sleeper(1)
+        return []
+
     def _find_profile(self, profile_name: str) -> dict[str, Any]:
-        matches = [item for item in self._parse_profiles() if item.get("name") == profile_name]
+        profiles = self._load_profiles()
+        matches = [item for item in profiles if item.get("name") == profile_name]
         if len(matches) != 1:
-            names = [item.get("name") for item in self._parse_profiles()]
+            names = [item.get("name") for item in profiles]
             raise AdapterError(
                 f"Donut profile must match exactly once: {profile_name!r}; matches={len(matches)} names={names}"
             )
@@ -168,6 +178,12 @@ class DonutUiaAdapter:
 
     def discover_profiles(self) -> list[DiscoveredProfile]:
         self._activate_window()
+        profiles = self._load_profiles()
+        if not profiles:
+            raise AdapterError(
+                "Donut profile table stayed empty after restoring the window; "
+                "open the profile list page and retry"
+            )
         return [
             DiscoveredProfile(
                 browser_type="donut",
@@ -175,6 +191,6 @@ class DonutUiaAdapter:
                 profile_name=str(item.get("name") or ""),
                 running=bool(item.get("is_running")),
             )
-            for item in self._parse_profiles()
+            for item in profiles
             if item.get("name")
         ]

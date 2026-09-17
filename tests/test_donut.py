@@ -1,5 +1,8 @@
 from types import SimpleNamespace
 
+import pytest
+
+from browser_watchdog.adapters import AdapterError
 from browser_watchdog.adapters.donut import DonutUiaAdapter
 
 
@@ -160,3 +163,25 @@ def test_parse_english_donut_table_rows():
         "AU-DT-HK3-18",
     ]
     assert [profile["is_running"] for profile in profiles] == [False, True]
+
+
+def test_load_profiles_retries_while_restored_table_is_rendering():
+    adapter = DonutUiaAdapter()
+    responses = iter([[], [], [{"name": "AU-DT-HK3-16", "is_running": False}]])
+    sleeps = []
+    adapter._parse_profiles = lambda: next(responses)
+    adapter.sleeper = sleeps.append
+
+    profiles = adapter._load_profiles(attempts=3)
+
+    assert profiles == [{"name": "AU-DT-HK3-16", "is_running": False}]
+    assert sleeps == [1, 1]
+
+
+def test_discovery_rejects_empty_donut_table():
+    adapter = DonutUiaAdapter()
+    adapter._activate_window = lambda: None
+    adapter._load_profiles = lambda: []
+
+    with pytest.raises(AdapterError, match="profile table stayed empty"):
+        adapter.discover_profiles()
