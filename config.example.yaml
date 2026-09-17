@@ -1,5 +1,10 @@
 central:
   base_url: "https://ai-compare-server.tec-do.cn/"
+  # login: 自动登录并在 Cookie 失效时重新登录；bearer: 使用固定 API Token；auto: 优先登录。
+  auth_mode: "login"
+  username_env: "AI_COMPARE_PANEL_USERNAME"
+  password_env: "AI_COMPARE_PANEL_PASSWORD"
+  # 仅 auth_mode=bearer 时使用。
   token_env: "AI_COMPARE_PANEL_TOKEN"
   request_timeout_seconds: 15
 
@@ -23,6 +28,7 @@ browsers:
   donut:
     enabled: false
     mode: "uia"  # uia | rest | auto
+    # 下面两项只在 rest 模式使用；uia 模式不需要 DONUT_API_KEY。
     base_url: "http://127.0.0.1:10108"
     token_env: "DONUT_API_KEY"
     request_timeout_seconds: 30

@@ -29,6 +29,47 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _build_central_client(config) -> CentralClient:
+    central_config = config.central
+    token = os.getenv(central_config.token_env, "").strip()
+    username = os.getenv(central_config.username_env, "").strip()
+    password = os.getenv(central_config.password_env, "")
+    auth_mode = central_config.auth_mode
+
+    if auth_mode == "auto":
+        if username or password:
+            if not username or not password:
+                raise ConfigError(
+                    f"both {central_config.username_env} and "
+                    f"{central_config.password_env} are required"
+                )
+            auth_mode = "login"
+        elif token:
+            auth_mode = "bearer"
+        else:
+            raise ConfigError(
+                "central authentication is not configured; set panel username/password "
+                "or a bearer token"
+            )
+    elif auth_mode == "login":
+        if not username or not password:
+            raise ConfigError(
+                f"both {central_config.username_env} and "
+                f"{central_config.password_env} are required"
+            )
+    elif auth_mode == "bearer" and not token:
+        raise ConfigError(f"environment variable {central_config.token_env} is required")
+
+    return CentralClient(
+        central_config.base_url,
+        token=token,
+        timeout_seconds=central_config.request_timeout_seconds,
+        auth_mode=auth_mode,
+        username=username,
+        password=password,
+    )
+
+
 def main() -> int:
     args = _parser().parse_args()
     config_path = Path(args.config).resolve()
@@ -36,14 +77,7 @@ def main() -> int:
     logger = configure_logging(project_dir / "logs" / "watchdog.log", args.verbose)
     try:
         config = load_config(config_path)
-        token = os.getenv(config.central.token_env, "").strip()
-        if not token:
-            raise ConfigError(f"environment variable {config.central.token_env} is required")
-        central = CentralClient(
-            config.central.base_url,
-            token,
-            config.central.request_timeout_seconds,
-        )
+        central = _build_central_client(config)
         adapters = build_adapters(config)
 
         if args.discover:

@@ -13,24 +13,70 @@ class CentralClient:
     def __init__(
         self,
         base_url: str,
-        token: str,
+        token: str = "",
         timeout_seconds: float = 15,
         session: requests.Session | None = None,
+        *,
+        auth_mode: str = "bearer",
+        username: str = "",
+        password: str = "",
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.timeout_seconds = timeout_seconds
         self.session = session or requests.Session()
+        self.auth_mode = auth_mode
+        self.username = username
+        self.password = password
         self.headers = {"Authorization": f"Bearer {token}"} if token else {}
+        self._logged_in = False
 
-    def _get_json(self, path: str, *, authenticated: bool) -> dict[str, Any]:
+    def _login(self) -> None:
         try:
-            response = self.session.get(
-                f"{self.base_url}{path}",
-                headers=self.headers if authenticated else {},
+            response = self.session.post(
+                f"{self.base_url}/api/auth/login",
+                json={"username": self.username, "password": self.password},
                 timeout=self.timeout_seconds,
             )
             response.raise_for_status()
             payload = response.json()
+        except (requests.RequestException, ValueError) as exc:
+            raise CentralServiceError(f"panel login failed: {exc}") from exc
+        if not isinstance(payload, dict) or payload.get("ok") is not True:
+            raise CentralServiceError("panel login returned an invalid response")
+        self._logged_in = True
+
+    def _clear_login(self) -> None:
+        self._logged_in = False
+        cookies = getattr(self.session, "cookies", None)
+        if cookies is not None:
+            cookies.clear()
+
+    def _get(self, path: str, *, authenticated: bool):
+        if authenticated and self.auth_mode == "login" and not self._logged_in:
+            self._login()
+        headers = self.headers if authenticated and self.auth_mode == "bearer" else {}
+        response = self.session.get(
+            f"{self.base_url}{path}",
+            headers=headers,
+            timeout=self.timeout_seconds,
+        )
+        if authenticated and self.auth_mode == "login" and response.status_code == 401:
+            self._clear_login()
+            self._login()
+            response = self.session.get(
+                f"{self.base_url}{path}",
+                headers={},
+                timeout=self.timeout_seconds,
+            )
+        return response
+
+    def _get_json(self, path: str, *, authenticated: bool) -> dict[str, Any]:
+        try:
+            response = self._get(path, authenticated=authenticated)
+            response.raise_for_status()
+            payload = response.json()
+        except CentralServiceError:
+            raise
         except (requests.RequestException, ValueError) as exc:
             raise CentralServiceError(f"GET {path} failed: {exc}") from exc
         if not isinstance(payload, dict):

@@ -28,6 +28,8 @@ def test_load_config_accepts_bitbrowser_instance(tmp_path: Path):
     )
     config = load_config(path)
     assert config.central.base_url == "http://127.0.0.1:8080"
+    assert config.central.auth_mode == "auto"
+    assert config.central.username_env == "AI_COMPARE_PANEL_USERNAME"
     assert config.instances[0].profile_id == "abc"
     assert config.instances[0].auto_restart is True
 
@@ -57,4 +59,14 @@ def test_bitbrowser_requires_profile_id(tmp_path: Path):
 """,
     )
     with pytest.raises(ConfigError, match="requires profile_id"):
+        load_config(path)
+
+
+def test_invalid_central_auth_mode_is_rejected(tmp_path: Path):
+    path = tmp_path / "config.yaml"
+    path.write_text(
+        "central:\n  base_url: http://server\n  auth_mode: cookie\ninstances: []\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ConfigError, match="central.auth_mode"):
         load_config(path)

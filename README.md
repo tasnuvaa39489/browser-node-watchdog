@@ -22,7 +22,25 @@ Copy-Item config.example.yaml config.yaml
 uv sync
 ```
 
-在当前 PowerShell 会话设置中央服务 Token：
+推荐使用面板账号自动登录。最好创建一个专用的普通面板用户，不要使用管理员账号。
+
+PowerShell：
+
+```powershell
+$env:AI_COMPARE_PANEL_USERNAME="watchdog专用账号"
+$env:AI_COMPARE_PANEL_PASSWORD="账号密码"
+```
+
+CMD：
+
+```cmd
+set "AI_COMPARE_PANEL_USERNAME=watchdog专用账号"
+set "AI_COMPARE_PANEL_PASSWORD=账号密码"
+```
+
+脚本会调用 `/api/auth/login` 并在内存中保存 `panel_session` Cookie；Cookie 过期或中央服务重启后遇到 401，会自动重新登录并重试一次。账号密码只从环境变量读取，不要写入 `config.yaml`。
+
+如生产环境配置了固定 `PANEL_API_TOKEN`，也可将 `central.auth_mode` 改为 `bearer` 并设置：
 
 ```powershell
 $env:AI_COMPARE_PANEL_TOKEN="与服务端 PANEL_API_TOKEN 一致的值"
@@ -34,7 +52,7 @@ $env:AI_COMPARE_PANEL_TOKEN="与服务端 PANEL_API_TOKEN 一致的值"
 $env:DONUT_API_KEY="Donut 本地 API Token"
 ```
 
-不要把 Token 写入 `config.yaml`。
+不要把面板密码、Cookie 或 Token 写入 `config.yaml`。
 
 ## 配置实例
 

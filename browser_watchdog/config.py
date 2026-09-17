@@ -14,7 +14,10 @@ class ConfigError(ValueError):
 @dataclass(frozen=True)
 class CentralConfig:
     base_url: str
+    auth_mode: str = "auto"
     token_env: str = "AI_COMPARE_PANEL_TOKEN"
+    username_env: str = "AI_COMPARE_PANEL_USERNAME"
+    password_env: str = "AI_COMPARE_PANEL_PASSWORD"
     request_timeout_seconds: float = 15.0
 
 
@@ -104,9 +107,19 @@ def load_config(path: str | Path) -> AppConfig:
     base_url = str(central_raw.get("base_url") or "").strip().rstrip("/")
     if not base_url:
         raise ConfigError("central.base_url is required")
+    auth_mode = str(central_raw.get("auth_mode") or "auto").strip().lower()
+    if auth_mode not in {"auto", "login", "bearer"}:
+        raise ConfigError("central.auth_mode must be auto, login, or bearer")
     central = CentralConfig(
         base_url=base_url,
+        auth_mode=auth_mode,
         token_env=str(central_raw.get("token_env") or "AI_COMPARE_PANEL_TOKEN").strip(),
+        username_env=str(
+            central_raw.get("username_env") or "AI_COMPARE_PANEL_USERNAME"
+        ).strip(),
+        password_env=str(
+            central_raw.get("password_env") or "AI_COMPARE_PANEL_PASSWORD"
+        ).strip(),
         request_timeout_seconds=float(central_raw.get("request_timeout_seconds", 15)),
     )
 
