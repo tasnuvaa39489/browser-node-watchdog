@@ -4,91 +4,13 @@ import ctypes
 import time
 from typing import Any
 
-import requests
-
 from browser_watchdog.config import InstanceConfig
 
 from .base import AdapterError, DiscoveredProfile
 
 
-class DonutRestAdapter:
-    def __init__(
-        self,
-        base_url: str,
-        token: str,
-        timeout_seconds: float = 30,
-        session: requests.Session | None = None,
-        sleeper=time.sleep,
-    ) -> None:
-        if not token:
-            raise AdapterError("Donut REST API token is required")
-        self.base_url = base_url.rstrip("/")
-        self.timeout_seconds = timeout_seconds
-        self.session = session or requests.Session()
-        self.headers = {"Authorization": f"Bearer {token}"}
-        self.sleeper = sleeper
-
-    def _request(self, method: str, path: str, body: dict[str, Any] | None = None) -> Any:
-        try:
-            response = self.session.request(
-                method,
-                f"{self.base_url}{path}",
-                headers=self.headers,
-                json=body,
-                timeout=self.timeout_seconds,
-            )
-            response.raise_for_status()
-            if response.status_code == 204 or not response.content:
-                return {}
-            return response.json()
-        except (requests.RequestException, ValueError) as exc:
-            raise AdapterError(f"Donut {method} {path} failed: {exc}") from exc
-
-    def get_profile(self, profile_id: str) -> dict[str, Any]:
-        payload = self._request("GET", f"/v1/profiles/{profile_id}")
-        profile = payload.get("profile") if isinstance(payload, dict) else None
-        if not isinstance(profile, dict):
-            raise AdapterError("Donut profile response is invalid")
-        return profile
-
-    def restart(self, instance: InstanceConfig, stop_delay_seconds: int) -> None:
-        if not instance.profile_id:
-            raise AdapterError(f"{instance.browser_name}: Donut REST mode requires profile_id")
-        profile = self.get_profile(instance.profile_id)
-        if bool(profile.get("is_running")):
-            self._request("POST", f"/v1/profiles/{instance.profile_id}/kill")
-            self.sleeper(stop_delay_seconds)
-        self._request(
-            "POST",
-            f"/v1/profiles/{instance.profile_id}/run",
-            {"headless": False},
-        )
-
-    def discover_profiles(self) -> list[DiscoveredProfile]:
-        payload = self._request("GET", "/v1/profiles")
-        items = payload.get("profiles") if isinstance(payload, dict) else None
-        if not isinstance(items, list):
-            raise AdapterError("Donut /v1/profiles returned invalid profiles list")
-        profiles: list[DiscoveredProfile] = []
-        for item in items:
-            if not isinstance(item, dict):
-                continue
-            profile_id = str(item.get("id") or "").strip()
-            if not profile_id:
-                continue
-            profiles.append(
-                DiscoveredProfile(
-                    browser_type="donut",
-                    profile_id=profile_id,
-                    profile_name=str(item.get("name") or "").strip(),
-                    running=bool(item.get("is_running")),
-                )
-            )
-        return profiles
-
-
 class DonutUiaAdapter:
-    """UI Automation fallback for Donut installations without REST control."""
+    """Control Donut profiles through Windows UI Automation."""
 
     HEADER_TEXTS = ("名称", "标签", "代理 / VPN", "全选")
     ACTION_TEXTS = ("启动", "停止")

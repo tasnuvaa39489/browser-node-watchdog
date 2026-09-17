@@ -14,8 +14,6 @@ class ConfigError(ValueError):
 @dataclass(frozen=True)
 class CentralConfig:
     base_url: str
-    auth_mode: str = "auto"
-    token_env: str = "AI_COMPARE_PANEL_TOKEN"
     username_env: str = "AI_COMPARE_PANEL_USERNAME"
     password_env: str = "AI_COMPARE_PANEL_PASSWORD"
     request_timeout_seconds: float = 15.0
@@ -45,10 +43,6 @@ class BitBrowserConfig:
 @dataclass(frozen=True)
 class DonutConfig:
     enabled: bool = False
-    mode: str = "uia"
-    base_url: str = "http://127.0.0.1:10108"
-    token_env: str = "DONUT_API_KEY"
-    request_timeout_seconds: float = 30.0
     window_title: str = "Donut Browser"
 
 
@@ -107,13 +101,8 @@ def load_config(path: str | Path) -> AppConfig:
     base_url = str(central_raw.get("base_url") or "").strip().rstrip("/")
     if not base_url:
         raise ConfigError("central.base_url is required")
-    auth_mode = str(central_raw.get("auth_mode") or "auto").strip().lower()
-    if auth_mode not in {"auto", "login", "bearer"}:
-        raise ConfigError("central.auth_mode must be auto, login, or bearer")
     central = CentralConfig(
         base_url=base_url,
-        auth_mode=auth_mode,
-        token_env=str(central_raw.get("token_env") or "AI_COMPARE_PANEL_TOKEN").strip(),
         username_env=str(
             central_raw.get("username_env") or "AI_COMPARE_PANEL_USERNAME"
         ).strip(),
@@ -157,15 +146,8 @@ def load_config(path: str | Path) -> AppConfig:
         request_timeout_seconds=float(bit_raw.get("request_timeout_seconds", 30)),
         load_extensions=bool(bit_raw.get("load_extensions", True)),
     )
-    donut_mode = str(donut_raw.get("mode") or "uia").strip().lower()
-    if donut_mode not in {"uia", "rest", "auto"}:
-        raise ConfigError("browsers.donut.mode must be uia, rest, or auto")
     donut = DonutConfig(
         enabled=bool(donut_raw.get("enabled", False)),
-        mode=donut_mode,
-        base_url=str(donut_raw.get("base_url") or "http://127.0.0.1:10108").rstrip("/"),
-        token_env=str(donut_raw.get("token_env") or "DONUT_API_KEY").strip(),
-        request_timeout_seconds=float(donut_raw.get("request_timeout_seconds", 30)),
         window_title=str(donut_raw.get("window_title") or "Donut Browser"),
     )
 
@@ -191,8 +173,8 @@ def load_config(path: str | Path) -> AppConfig:
         profile_name = str(data.get("profile_name") or "").strip()
         if browser_type == "bitbrowser" and not profile_id:
             raise ConfigError(f"{browser_name}: bitbrowser requires profile_id")
-        if browser_type == "donut" and not (profile_id or profile_name):
-            raise ConfigError(f"{browser_name}: donut requires profile_id or profile_name")
+        if browser_type == "donut" and not profile_name:
+            raise ConfigError(f"{browser_name}: donut requires profile_name")
         instances.append(
             InstanceConfig(
                 browser_name=browser_name,

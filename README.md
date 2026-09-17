@@ -12,7 +12,7 @@
 - Python 3.11 及以上；
 - 推荐使用 `uv`；
 - BitBrowser 本地 API 已开启；
-- Donut 使用 REST API，或 Donut 主窗口保持打开以供 UIA 操作。
+- Donut 主窗口保持打开，以供 Windows UIA 操作。
 
 ## 安装
 
@@ -38,21 +38,9 @@ set "AI_COMPARE_PANEL_USERNAME=watchdog专用账号"
 set "AI_COMPARE_PANEL_PASSWORD=账号密码"
 ```
 
-脚本会调用 `/api/auth/login` 并在内存中保存 `panel_session` Cookie；Cookie 过期或中央服务重启后遇到 401，会自动重新登录并重试一次。账号密码只从环境变量读取，不要写入 `config.yaml`。
+脚本会调用 `/api/auth/login` 并在内存中保存 `panel_session` Cookie；Cookie 过期或中央服务重启后遇到 401，会自动重新登录并重试一次。账号密码只从环境变量读取，不要写入 `config.yaml`。Donut 只通过 UIA 操作，不需要 API Key。
 
-如生产环境配置了固定 `PANEL_API_TOKEN`，也可将 `central.auth_mode` 改为 `bearer` 并设置：
-
-```powershell
-$env:AI_COMPARE_PANEL_TOKEN="与服务端 PANEL_API_TOKEN 一致的值"
-```
-
-如果使用 Donut REST API：
-
-```powershell
-$env:DONUT_API_KEY="Donut 本地 API Token"
-```
-
-不要把面板密码、Cookie 或 Token 写入 `config.yaml`。
+不要把面板密码或 Cookie 写入 `config.yaml`。
 
 ## 配置实例
 
@@ -120,7 +108,7 @@ uv run python watchdog.py --config config.yaml
 
 控制台关闭后脚本也会停止。人工验证稳定后，再配置 Windows 任务计划程序。
 
-Donut 使用 `uia` 模式时，任务必须选择“仅当用户登录时运行”，并保持 Donut 主窗口所在的桌面会话可用。
+使用 Donut 时，任务必须选择“仅当用户登录时运行”，并保持 Donut 主窗口所在的桌面会话可用。
 
 ## 处理结果
 

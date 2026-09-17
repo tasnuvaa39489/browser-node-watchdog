@@ -52,10 +52,9 @@ def test_login_mode_logs_in_once_and_reuses_session():
     )
     client = CentralClient(
         "https://server",
-        session=session,
-        auth_mode="login",
         username="watchdog",
         password="secret",
+        session=session,
     )
 
     assert "node-1" in client.get_ai_status()
@@ -71,10 +70,9 @@ def test_login_mode_reauthenticates_once_after_401():
     )
     client = CentralClient(
         "https://server",
-        session=session,
-        auth_mode="login",
         username="watchdog",
         password="secret",
+        session=session,
     )
 
     assert "node-1" in client.get_ai_status()
@@ -87,10 +85,9 @@ def test_login_failure_does_not_expose_password():
     session = FakeSession(post_responses=[FakeResponse({}, 401)])
     client = CentralClient(
         "https://server",
-        session=session,
-        auth_mode="login",
         username="watchdog",
         password="super-secret-password",
+        session=session,
     )
 
     try:
@@ -99,17 +96,3 @@ def test_login_failure_does_not_expose_password():
         assert "super-secret-password" not in str(exc)
     else:
         raise AssertionError("login failure should raise CentralServiceError")
-
-
-def test_bearer_mode_keeps_existing_behavior():
-    session = FakeSession(get_responses=[FakeResponse(status_payload())])
-    client = CentralClient(
-        "https://server",
-        token="api-token",
-        session=session,
-        auth_mode="bearer",
-    )
-
-    assert "node-1" in client.get_ai_status()
-    assert session.post_calls == []
-    assert session.get_calls[0][1] == {"Authorization": "Bearer api-token"}

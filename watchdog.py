@@ -31,42 +31,19 @@ def _parser() -> argparse.ArgumentParser:
 
 def _build_central_client(config) -> CentralClient:
     central_config = config.central
-    token = os.getenv(central_config.token_env, "").strip()
     username = os.getenv(central_config.username_env, "").strip()
     password = os.getenv(central_config.password_env, "")
-    auth_mode = central_config.auth_mode
-
-    if auth_mode == "auto":
-        if username or password:
-            if not username or not password:
-                raise ConfigError(
-                    f"both {central_config.username_env} and "
-                    f"{central_config.password_env} are required"
-                )
-            auth_mode = "login"
-        elif token:
-            auth_mode = "bearer"
-        else:
-            raise ConfigError(
-                "central authentication is not configured; set panel username/password "
-                "or a bearer token"
-            )
-    elif auth_mode == "login":
-        if not username or not password:
-            raise ConfigError(
-                f"both {central_config.username_env} and "
-                f"{central_config.password_env} are required"
-            )
-    elif auth_mode == "bearer" and not token:
-        raise ConfigError(f"environment variable {central_config.token_env} is required")
+    if not username or not password:
+        raise ConfigError(
+            f"both {central_config.username_env} and "
+            f"{central_config.password_env} are required"
+        )
 
     return CentralClient(
         central_config.base_url,
-        token=token,
-        timeout_seconds=central_config.request_timeout_seconds,
-        auth_mode=auth_mode,
         username=username,
         password=password,
+        timeout_seconds=central_config.request_timeout_seconds,
     )
 
 

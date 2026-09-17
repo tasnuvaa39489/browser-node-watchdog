@@ -18,6 +18,16 @@ def build_discovered_config(
     adapters: dict[str, BrowserAdapter],
 ) -> tuple[dict[str, Any], list[str]]:
     raw = deepcopy(load_raw_config(config_path))
+    central_raw = raw.get("central")
+    if isinstance(central_raw, dict):
+        central_raw.pop("auth_mode", None)
+        central_raw.pop("token_env", None)
+    browsers_raw = raw.get("browsers")
+    if isinstance(browsers_raw, dict):
+        donut_raw = browsers_raw.get("donut")
+        if isinstance(donut_raw, dict):
+            for legacy_key in ("mode", "base_url", "token_env", "request_timeout_seconds"):
+                donut_raw.pop(legacy_key, None)
     central_names = set(central.get_ai_status())
     existing_by_key: dict[tuple[str, str], dict[str, Any]] = {}
     for item in raw.get("instances") or []:

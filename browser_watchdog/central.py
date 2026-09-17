@@ -13,21 +13,16 @@ class CentralClient:
     def __init__(
         self,
         base_url: str,
-        token: str = "",
+        username: str,
+        password: str,
         timeout_seconds: float = 15,
         session: requests.Session | None = None,
-        *,
-        auth_mode: str = "bearer",
-        username: str = "",
-        password: str = "",
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.timeout_seconds = timeout_seconds
         self.session = session or requests.Session()
-        self.auth_mode = auth_mode
         self.username = username
         self.password = password
-        self.headers = {"Authorization": f"Bearer {token}"} if token else {}
         self._logged_in = False
 
     def _login(self) -> None:
@@ -52,15 +47,14 @@ class CentralClient:
             cookies.clear()
 
     def _get(self, path: str, *, authenticated: bool):
-        if authenticated and self.auth_mode == "login" and not self._logged_in:
+        if authenticated and not self._logged_in:
             self._login()
-        headers = self.headers if authenticated and self.auth_mode == "bearer" else {}
         response = self.session.get(
             f"{self.base_url}{path}",
-            headers=headers,
+            headers={},
             timeout=self.timeout_seconds,
         )
-        if authenticated and self.auth_mode == "login" and response.status_code == 401:
+        if authenticated and response.status_code == 401:
             self._clear_login()
             self._login()
             response = self.session.get(
