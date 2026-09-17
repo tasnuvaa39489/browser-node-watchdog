@@ -15,6 +15,40 @@ from browser_watchdog.config import AppConfig, load_raw_config
 logger = logging.getLogger("browser_watchdog")
 
 
+def _match_central_browser_name(
+    browser_type: str,
+    profile_name: str,
+    central_names: set[str],
+) -> tuple[str | None, str | None]:
+    if profile_name in central_names:
+        return profile_name, "exact"
+
+    # BitBrowser profiles on some servers omit the machine segment. For example,
+    # TH-BT-10 is the local form of TH-BT-HK05-10. Only accept a unique central
+    # candidate so discovery cannot silently bind a profile to the wrong server.
+    if browser_type != "bitbrowser":
+        return None, None
+    local_parts = profile_name.split("-")
+    if len(local_parts) != 3 or not all(local_parts):
+        return None, None
+
+    candidates: list[str] = []
+    for central_name in central_names:
+        central_parts = central_name.split("-")
+        if (
+            len(central_parts) == 4
+            and all(central_parts)
+            and central_parts[0] == local_parts[0]
+            and central_parts[1] == local_parts[1]
+            and central_parts[3] == local_parts[2]
+        ):
+            candidates.append(central_name)
+
+    if len(candidates) == 1:
+        return candidates[0], "compact"
+    return None, None
+
+
 def build_discovered_config(
     config_path: str | Path,
     config: AppConfig,
@@ -59,10 +93,22 @@ def build_discovered_config(
             if existing:
                 generated.append(existing)
                 continue
-            exact_match = profile.profile_name in central_names
-            browser_name = profile.profile_name
-            if not exact_match:
+            browser_name, match_kind = _match_central_browser_name(
+                browser_type,
+                profile.profile_name,
+                central_names,
+            )
+            matched = browser_name is not None
+            if browser_name is None:
+                browser_name = profile.profile_name
                 unresolved.append(f"{browser_type}:{profile.profile_name or profile.profile_id}")
+            elif match_kind == "compact":
+                logger.info(
+                    "discovery_compact_match browser=%s profile=%s browser_name=%s",
+                    browser_type,
+                    profile.profile_name,
+                    browser_name,
+                )
             item: dict[str, Any] = {
                 "browser_name": browser_name,
                 "browser_type": browser_type,
@@ -71,7 +117,7 @@ def build_discovered_config(
                 item["profile_id"] = profile.profile_id
             if profile.profile_name:
                 item["profile_name"] = profile.profile_name
-            item["auto_restart"] = bool(exact_match)
+            item["auto_restart"] = matched
             item["priority"] = 100
             generated.append(item)
 

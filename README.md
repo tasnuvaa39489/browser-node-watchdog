@@ -80,6 +80,8 @@ config.discovered.yaml
 规则：
 
 - 本地 profile 名称与中央 `browserName` 完全一致时自动匹配；
+- BitBrowser 本地名称为 `地区-BT-序号`、中央名称为 `地区-BT-节点-序号` 时，只有中央存在唯一候选才会自动匹配（例如 `TH-BT-10` → `TH-BT-HK05-10`）；
+- 如果相同地区和序号对应多个中央节点，脚本不会猜测映射；
 - 无法准确匹配的 profile 会设置 `auto_restart: false`；
 - 原配置中已经确认的 profile 映射会保留；
 - 必须人工检查生成结果，再将确认后的内容合并到 `config.yaml`。
