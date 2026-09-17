@@ -12,7 +12,7 @@ from .base import AdapterError, DiscoveredProfile
 class DonutUiaAdapter:
     """Control Donut profiles through Windows UI Automation."""
 
-    HEADER_TEXTS = ("名称", "标签", "代理 / VPN", "全选")
+    HEADER_TEXTS = ("名称", "标签", "备注", "代理 / VPN", "扩展", "DNS", "全选")
     ACTION_TEXTS = ("启动", "停止")
     SKIP_AS_NAME = HEADER_TEXTS + (
         "配置文件信息",
@@ -35,14 +35,18 @@ class DonutUiaAdapter:
 
     def _get_window(self):
         Desktop, _ = self._desktop_and_uia()
-        windows = Desktop(backend="uia").windows()
+        windows = Desktop(backend="win32").windows()
         exact = [window for window in windows if window.window_text() == self.window_title]
-        if exact:
-            return exact[0]
-        partial = [window for window in windows if self.window_title in window.window_text()]
-        if partial:
-            return partial[0]
-        raise AdapterError(f"Donut window not found: {self.window_title}")
+        if len(exact) != 1:
+            matches = [window.window_text() for window in windows if "Donut" in window.window_text()]
+            raise AdapterError(
+                f"Donut window must match exactly once: {self.window_title!r}; "
+                f"matches={len(exact)} donut_windows={matches}"
+            )
+        try:
+            return Desktop(backend="uia").window(handle=exact[0].handle).wrapper_object()
+        except Exception as exc:
+            raise AdapterError(f"failed to connect Donut UIA window: {exc}") from exc
 
     def _activate_window(self) -> None:
         window = self._get_window()

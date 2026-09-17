@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
@@ -9,6 +10,9 @@ import yaml
 from browser_watchdog.adapters import BrowserAdapter, DiscoveredProfile
 from browser_watchdog.central import CentralClient
 from browser_watchdog.config import AppConfig, load_raw_config
+
+
+logger = logging.getLogger("browser_watchdog")
 
 
 def build_discovered_config(
@@ -29,6 +33,7 @@ def build_discovered_config(
             for legacy_key in ("mode", "base_url", "token_env", "request_timeout_seconds"):
                 donut_raw.pop(legacy_key, None)
     central_names = set(central.get_ai_status())
+    logger.info("discovery_central_loaded nodes=%s", len(central_names))
     existing_by_key: dict[tuple[str, str], dict[str, Any]] = {}
     for item in raw.get("instances") or []:
         if not isinstance(item, dict):
@@ -41,7 +46,14 @@ def build_discovered_config(
     generated: list[dict[str, Any]] = []
     unresolved: list[str] = []
     for browser_type, adapter in adapters.items():
-        for profile in adapter.discover_profiles():
+        logger.info("discovery_browser_started browser=%s", browser_type)
+        profiles = adapter.discover_profiles()
+        logger.info(
+            "discovery_browser_completed browser=%s profiles=%s",
+            browser_type,
+            len(profiles),
+        )
+        for profile in profiles:
             key_value = profile.profile_id or profile.profile_name
             existing = existing_by_key.get((browser_type, key_value))
             if existing:
