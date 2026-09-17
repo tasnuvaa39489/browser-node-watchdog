@@ -1,0 +1,11 @@
+.venv/
+.idea/
+__pycache__/
+.pytest_cache/
+.pytest-tmp*/
+pytest-cache-files-*/
+*.py[cod]
+config.yaml
+config.discovered.yaml
+state.json
+logs/
