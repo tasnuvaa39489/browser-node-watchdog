@@ -12,13 +12,36 @@ from .base import AdapterError, DiscoveredProfile
 class DonutUiaAdapter:
     """Control Donut profiles through Windows UI Automation."""
 
-    HEADER_TEXTS = ("名称", "标签", "备注", "代理 / VPN", "扩展", "DNS", "全选")
-    ACTION_TEXTS = ("启动", "停止")
+    HEADER_TEXTS = (
+        "名称",
+        "标签",
+        "备注",
+        "代理 / VPN",
+        "扩展",
+        "DNS",
+        "全选",
+        "Name",
+        "Tags",
+        "Note",
+        "Proxy / VPN",
+        "EXT",
+        "Select all",
+    )
+    START_ACTION_TEXTS = ("启动", "Launch")
+    STOP_ACTION_TEXTS = ("停止", "Stop")
+    ACTION_TEXTS = START_ACTION_TEXTS + STOP_ACTION_TEXTS
+    SELECT_PROFILE_TEXTS = ("选择配置文件", "Select profile")
+    PROFILE_INFO_TEXTS = ("配置文件信息", "Profile info")
     SKIP_AS_NAME = HEADER_TEXTS + (
         "配置文件信息",
+        "Profile info",
         "无标签",
+        "No tags",
+        "无备注",
+        "No Note",
         "未选择",
         "选择配置文件",
+        "Select profile",
     ) + ACTION_TEXTS + ("",)
 
     def __init__(self, window_title: str = "Donut Browser", sleeper=time.sleep) -> None:
@@ -67,7 +90,7 @@ class DonutUiaAdapter:
             text = item.window_text() or item.element_info.name
             if text in self.HEADER_TEXTS:
                 continue
-            if text == "选择配置文件":
+            if text in self.SELECT_PROFILE_TEXTS:
                 if current:
                     profiles.append(current)
                 current = {}
@@ -75,8 +98,8 @@ class DonutUiaAdapter:
                 if current is None:
                     current = {}
                 current["action_btn"] = item
-                current["is_running"] = text == "停止"
-            elif text == "配置文件信息":
+                current["is_running"] = text in self.STOP_ACTION_TEXTS
+            elif text in self.PROFILE_INFO_TEXTS:
                 if current:
                     profiles.append(current)
                     current = None

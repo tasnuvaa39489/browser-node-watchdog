@@ -113,3 +113,48 @@ def test_parse_current_donut_table_rows():
         "FR-DT-HK05-02",
     ]
     assert [profile["is_running"] for profile in profiles] == [True, False]
+
+
+def test_parse_english_donut_table_rows():
+    wrapper = FakeUiaWindow(
+        [
+            "Select all",
+            "Name",
+            "Tags",
+            "Note",
+            "Proxy / VPN",
+            "EXT",
+            "DNS",
+            "",
+            "Select profile",
+            "Launch",
+            "AU-DT-HK3-16",
+            "No tags",
+            "No Note",
+            "AU-01 \u00a0",
+            "ai_compare",
+            "—",
+            "",
+            "Profile info",
+            "",
+            "Stop",
+            "AU-DT-HK3-18",
+            "No tags",
+            "No Note",
+            "20.2 KB/s",
+            "ai_compare",
+            "—",
+            "",
+            "Profile info",
+        ]
+    )
+    adapter = DonutUiaAdapter()
+    adapter._get_window = lambda: wrapper
+
+    profiles = adapter._parse_profiles()
+
+    assert [profile["name"] for profile in profiles] == [
+        "AU-DT-HK3-16",
+        "AU-DT-HK3-18",
+    ]
+    assert [profile["is_running"] for profile in profiles] == [False, True]
