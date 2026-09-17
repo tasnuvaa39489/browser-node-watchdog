@@ -60,6 +60,23 @@ class FakeDataItem:
         return self._text
 
 
+class FakeActionItem:
+    def __init__(self, default_action):
+        self.default_action = default_action
+        self.double_clicks = 0
+        self.clicks = 0
+        self.element_info = SimpleNamespace(element=object())
+
+    def legacy_properties(self):
+        return {"DefaultAction": self.default_action}
+
+    def double_click_input(self):
+        self.double_clicks += 1
+
+    def click_input(self):
+        self.clicks += 1
+
+
 class FakeUiaWindow:
     def __init__(self, texts=()):
         self.items = [FakeDataItem(text) for text in texts]
@@ -185,3 +202,17 @@ def test_discovery_rejects_empty_donut_table():
 
     with pytest.raises(AdapterError, match="profile table stayed empty"):
         adapter.discover_profiles()
+
+
+@pytest.mark.parametrize("default_action", ["双击", "Double click"])
+def test_trigger_uses_physical_double_click_for_donut_action(default_action):
+    adapter = DonutUiaAdapter()
+    activations = []
+    adapter._activate_window = lambda: activations.append(True)
+    button = FakeActionItem(default_action)
+
+    adapter._trigger(button)
+
+    assert activations == [True]
+    assert button.double_clicks == 1
+    assert button.clicks == 0

@@ -77,8 +77,18 @@ class DonutUiaAdapter:
     def _activate_window(self) -> None:
         window = self._get_window()
         user32 = ctypes.windll.user32
+        kernel32 = ctypes.windll.kernel32
         user32.ShowWindow(window.handle, 9)
+
+        foreground = user32.GetForegroundWindow()
+        foreground_thread = user32.GetWindowThreadProcessId(foreground, None)
+        current_thread = kernel32.GetCurrentThreadId()
+        attached = False
+        if foreground_thread and foreground_thread != current_thread:
+            attached = bool(user32.AttachThreadInput(foreground_thread, current_thread, True))
         user32.SetForegroundWindow(window.handle)
+        if attached:
+            user32.AttachThreadInput(foreground_thread, current_thread, False)
         try:
             window.set_focus()
         except Exception:
@@ -132,6 +142,23 @@ class DonutUiaAdapter:
         return matches[0]
 
     def _trigger(self, button) -> None:
+        try:
+            default_action = str(button.legacy_properties().get("DefaultAction") or "")
+        except Exception:
+            default_action = ""
+
+        # Donut exposes its Launch/Stop DataItem as a double-click action. Its
+        # LegacyIAccessible.DoDefaultAction may return successfully without
+        # doing anything, so use a real foreground double-click when the
+        # advertised action says so.
+        if "双击" in default_action or "double" in default_action.lower():
+            self._activate_window()
+            try:
+                button.double_click_input()
+                return
+            except Exception as exc:
+                raise AdapterError(f"Donut UIA double-click failed: {exc}") from exc
+
         _, uia_defines = self._desktop_and_uia()
         try:
             legacy = uia_defines.get_elem_interface(button.element_info.element, "LegacyIAccessible")
@@ -140,10 +167,7 @@ class DonutUiaAdapter:
         except Exception:
             self._activate_window()
         try:
-            if "双击" in button.legacy_properties().get("DefaultAction", ""):
-                button.double_click_input()
-            else:
-                button.click_input()
+            button.click_input()
         except Exception as exc:
             raise AdapterError(f"Donut UIA action failed: {exc}") from exc
 
