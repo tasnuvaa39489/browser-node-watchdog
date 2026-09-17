@@ -23,10 +23,11 @@ def _match_central_browser_name(
     if profile_name in central_names:
         return profile_name, "exact"
 
-    # BitBrowser profiles on some servers omit the machine segment. For example,
-    # TH-BT-10 is the local form of TH-BT-HK05-10. Only accept a unique central
-    # candidate so discovery cannot silently bind a profile to the wrong server.
-    if browser_type != "bitbrowser":
+    # Profiles on some servers omit the machine segment. For example,
+    # TH-BT-10 can be the local form of TH-BT-HK05-10, and GB-DT-07 can be the
+    # local form of GB-DT-HK3-07. Only accept a unique central candidate so
+    # discovery cannot silently bind a profile to the wrong server.
+    if browser_type not in {"bitbrowser", "donut"}:
         return None, None
     local_parts = profile_name.split("-")
     if len(local_parts) != 3 or not all(local_parts):

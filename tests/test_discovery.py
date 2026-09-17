@@ -143,3 +143,34 @@ def test_discovery_prefers_exact_name_over_compact_match(tmp_path: Path):
     assert discovered["instances"][0]["browser_name"] == "TH-BT-10"
     assert discovered["instances"][0]["auto_restart"] is True
     assert unresolved == []
+
+
+def test_discovery_matches_unique_compact_donut_name(tmp_path: Path):
+    path = tmp_path / "config.yaml"
+    write_minimal_config(path)
+    adapter = FakeAdapter(
+        DiscoveredProfile(
+            browser_type="donut",
+            profile_id="",
+            profile_name="GB-DT-07",
+            running=False,
+        )
+    )
+
+    discovered, unresolved = build_discovered_config(
+        path,
+        load_config(path),
+        FakeCentral(["GB-DT-HK3-07"]),
+        {"donut": adapter},
+    )
+
+    assert discovered["instances"] == [
+        {
+            "browser_name": "GB-DT-HK3-07",
+            "browser_type": "donut",
+            "profile_name": "GB-DT-07",
+            "auto_restart": True,
+            "priority": 100,
+        }
+    ]
+    assert unresolved == []
